@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  webapi:
+    build: ./webapi
+    container_name: webapi
+    ports:
+      - "18001:8001"
+    volumes:
+      # 開発用：ソースコードの変更を監視（ホットリロード用）
+      - ./webapi/main.py:/app/main.py:ro
+      - ./webapi/requirements.txt:/app/requirements.txt:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONPATH=/app
+    restart: unless-stopped
+    networks:
+      - webapi-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    depends_on: []
+
+# 将来的な他のサービスとの連携用ネットワーク
+networks:
+  webapi-network:
+    driver: bridge
+    name: webapi-network

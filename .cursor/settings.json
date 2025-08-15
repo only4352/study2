@@ -1,0 +1,29 @@
+{
+  "ai.licenseCheck.enabled": true,
+  "ai.licenseCheck.strictMode": true,
+  "ai.licenseCheck.allowedLicenses": ["MIT", "Apache-2.0", "BSD-3-Clause", "ISC", "Unlicense"],
+  "ai.licenseCheck.blockedLicenses": ["GPL", "AGPL", "LGPL", "MPL-2.0", "CC-BY-SA"],
+  "ai.licenseCheck.warnOnUnknown": true,
+  "ai.licenseCheck.requireLicenseHeader": true,
+  "ai.licenseCheck.commercialUseOnly": true,
+  "ai.suggestions.licenseAware": true,
+  "ai.codeGeneration.licenseCompliant": true,
+  "ai.codeGeneration.commercialFriendly": true,
+  "ai.librarySuggestions.licenseFiltered": true,
+  "ai.dependencies.licenseCheck": true,
+  "ai.dependencies.commercialOnly": true,
+  "editor.formatOnSave": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll": true,
+    "source.organizeImports": true
+  },
+  "python.defaultInterpreterPath": "./venv/bin/python",
+  "python.linting.enabled": true,
+  "python.linting.pylintEnabled": true,
+  "javascript.suggest.autoImports": true,
+  "typescript.suggest.autoImports": true,
+  "files.associations": {
+    "*.rules": "plaintext",
+    "*.cursorrules": "plaintext"
+  }
+}

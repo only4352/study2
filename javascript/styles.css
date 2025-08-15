@@ -1,66 +1,77 @@
 body {
-    font-family: sans-serif;
-    color: #666
+  font-family: sans-serif;
+  color: #666;
 }
 
-
 input {
-    border-radius: 8px;
-    border: none;
+  border-radius: 8px;
+  border: none;
 }
 
 button {
-    border-radius: 8px;
-    border: none;
-    padding: 4px 16px;
-    margin-left: 8px 8px;
+  border-radius: 8px;
+  border: none;
+  padding: 8px 16px;
+  margin-left: 0;
+  font-size: 14px;
+  transition: all 0.2s ease;
 }
 
 button:hover {
-    background-color: #79a8a9;
-    color: #fff;
-    cursor: pointer;
+  background-color: #79a8a9;
+  color: #fff;
+  cursor: pointer;
 }
 
 .input-area {
-    background-color: #c6e5d9   ;
-    width: 400px;
-    height: 30px;
-    padding: 8px;
-    margin: 8px;
-    border-radius: 8px;
+  background-color: #c6e5d9;
+  width: 400px;
+  height: 30px;
+  padding: 8px;
+  margin: 8px;
+  border-radius: 8px;
 }
 
 .title {
-    text-align: center;
-    margin-top: 0;
-    font-weight: bold;
+  text-align: center;
+  margin-top: 0;
+  font-weight: bold;
 }
 
 .incomplete-area {
-    border: 2px solid #aacfd0;
-    border-radius:8px;
-    width: 400px;
-    min-height: 200px;
-    padding: 8px;
-    margin: 8px;
+  border: 2px solid #aacfd0;
+  border-radius: 8px;
+  width: 400px;
+  min-height: 200px;
+  padding: 8px;
+  margin: 8px;
 }
 
 .complete-area {
-    border: 2px solid #aacfd0;
-    border-radius:8px;
-    width: 400px;
-    min-height: 200px;
-    padding: 8px;
-    margin: 8px;
-    background-color: #c9dede;   
+  border: 2px solid #aacfd0;
+  border-radius: 8px;
+  width: 400px;
+  min-height: 200px;
+  padding: 8px;
+  margin: 8px;
+  background-color: #c9dede;
 }
 
 .list-row {
-    display: flex;
-    align-items: center;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  margin-bottom: 8px;
 }
 
-.list-row {
-    margin-right: 6px;
+.todo-item {
+  flex: 1;
+  margin: 0;
+  padding: 4px 8px;
+}
+
+.list-row button {
+  margin-left: 0;
+  white-space: nowrap;
 }

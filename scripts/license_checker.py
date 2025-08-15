@@ -7,7 +7,7 @@ Copyright (c) 2024 Study2 Project
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
+in the software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
 furnished to do so, subject to the following conditions:
@@ -27,6 +27,8 @@ SOFTWARE.
 import os
 import re
 import sys
+import argparse
+import subprocess
 from pathlib import Path
 from typing import Dict, List, Set
 
@@ -49,43 +51,68 @@ COMMERCIAL_RESTRICTION_KEYWORDS = {
     '商用利用禁止', '商用利用不可', '商用ライセンス必要'
 }
 
+# 除外するファイル・ディレクトリ
+EXCLUDED_PATTERNS = {
+    '.git/', 'node_modules/', '__pycache__/', '.pytest_cache/',
+    'build/', 'dist/', '.cache/', 'coverage/', '.coverage',
+    '*.pyc', '*.pyo', '*.log', '*.tmp', '*.swp', '*.swo'
+}
+
 class LicenseChecker:
     def __init__(self, workspace_path: str = "."):
         self.workspace_path = Path(workspace_path)
         self.issues = []
         self.file_extensions = {
             '.py', '.js', '.jsx', '.ts', '.tsx', '.cpp', '.c', '.h', '.hpp',
-            '.java', '.kt', '.go', '.rs', '.php', '.rb', '.cs', '.swift'
+            '.java', '.kt', '.go', '.rs', '.php', '.rb', '.cs', '.swift',
+            '.json', '.toml', '.xml', '.yaml', '.yml', '.md', '.txt'
         }
+        
+    def should_exclude_file(self, file_path: Path) -> bool:
+        """ファイルを除外すべきかチェック"""
+        file_str = str(file_path)
+        
+        # 除外パターンのチェック
+        for pattern in EXCLUDED_PATTERNS:
+            if pattern in file_str:
+                return True
+                
+        # ライセンスチェッカー自体は除外
+        if 'license_checker.py' in file_str:
+            return True
+            
+        return False
         
     def check_file(self, file_path: Path) -> List[Dict]:
         """個別ファイルのライセンスをチェック"""
         issues = []
         
+        # 除外ファイルのチェック
+        if self.should_exclude_file(file_path):
+            return issues
+        
         try:
             with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
                 content = f.read()
                 
-            # ライセンスチェッカー自体は除外
-            if 'license_checker.py' in str(file_path):
-                return issues
-                
-            # ライセンスヘッダーのチェック
-            if not self._has_license_header(content):
-                issues.append({
-                    'type': 'warning',
-                    'message': 'ライセンスヘッダーが見つかりません',
-                    'file': str(file_path)
-                })
-            
-            # 禁止されたライセンスのチェック
-            for blocked_license in BLOCKED_LICENSES:
-                if blocked_license.lower() in content.lower():
+            # ライセンスヘッダーのチェック（ソースコードファイルのみ）
+            if file_path.suffix in ['.py', '.js', '.jsx', '.ts', '.tsx', '.cpp', '.c', '.h', '.hpp']:
+                if not self._has_license_header(content):
                     issues.append({
-                        'type': 'error',
-                        'message': f'禁止されたライセンスが検出されました: {blocked_license}',
+                        'type': 'warning',
+                        'message': 'ライセンスヘッダーが見つかりません',
                         'file': str(file_path)
                     })
+            
+            # 禁止されたライセンスのチェック（READMEファイルの説明は除外）
+            if file_path.name != 'README.md':
+                for blocked_license in BLOCKED_LICENSES:
+                    if blocked_license.lower() in content.lower():
+                        issues.append({
+                            'type': 'error',
+                            'message': f'禁止されたライセンスが検出されました: {blocked_license}',
+                            'file': str(file_path)
+                        })
             
             # 商用利用制限キーワードのチェック
             for keyword in COMMERCIAL_RESTRICTION_KEYWORDS:
@@ -157,6 +184,54 @@ class LicenseChecker:
         # 実際の実装では、PyPIからライセンス情報を取得する必要があります
         return issues
     
+    def get_staged_files(self) -> List[Path]:
+        """Gitでステージングされたファイルを取得"""
+        try:
+            result = subprocess.run(
+                ['git', 'diff', '--cached', '--name-only', '--diff-filter=ACM'],
+                capture_output=True, text=True, cwd=self.workspace_path
+            )
+            
+            if result.returncode == 0:
+                staged_files = result.stdout.strip().split('\n')
+                return [Path(f) for f in staged_files if f.strip()]
+            else:
+                print(f"⚠️  Gitコマンドエラー: {result.stderr}")
+                return []
+                
+        except Exception as e:
+            print(f"⚠️  Gitコマンド実行エラー: {e}")
+            return []
+    
+    def scan_staged_files(self) -> Dict[str, List[Dict]]:
+        """ステージングされたファイルのみをスキャン"""
+        staged_files = self.get_staged_files()
+        
+        if not staged_files:
+            return {
+                'errors': [],
+                'warnings': [],
+                'total_files_checked': 0,
+                'message': 'ステージングされたファイルがありません'
+            }
+        
+        all_issues = []
+        
+        for file_path in staged_files:
+            full_path = self.workspace_path / file_path
+            if full_path.is_file():
+                file_issues = self.check_file(full_path)
+                all_issues.extend(file_issues)
+        
+        # 結果を整理
+        results = {
+            'errors': [issue for issue in all_issues if issue['type'] == 'error'],
+            'warnings': [issue for issue in all_issues if issue['type'] == 'warning'],
+            'total_files_checked': len(staged_files)
+        }
+        
+        return results
+    
     def scan_workspace(self) -> Dict[str, List[Dict]]:
         """ワークスペース全体をスキャン"""
         all_issues = []
@@ -175,11 +250,20 @@ class LicenseChecker:
         
         return results
     
-    def print_report(self, results: Dict[str, List[Dict]]):
+    def print_report(self, results: Dict[str, List[Dict]], staged_only: bool = False):
         """結果レポートを出力"""
-        print("=" * 60)
-        print("商用利用制限チェッカーレポート")
-        print("=" * 60)
+        if staged_only:
+            print("=" * 60)
+            print("ステージングされたファイルのライセンスチェック")
+            print("=" * 60)
+        else:
+            print("=" * 60)
+            print("商用利用制限チェッカーレポート")
+            print("=" * 60)
+        
+        if 'message' in results:
+            print(f"\n{results['message']}")
+            return
         
         print(f"\nチェックしたファイル数: {results['total_files_checked']}")
         
@@ -201,17 +285,31 @@ class LicenseChecker:
         
         if results['errors']:
             print("❌ 商用利用に問題があるコードが検出されました")
+            if staged_only:
+                print("コミットを中止します。問題を修正してから再度コミットしてください。")
             sys.exit(1)
         else:
             print("✅ 商用利用可能なコードのみが検出されました")
 
 def main():
     """メイン関数"""
-    workspace_path = sys.argv[1] if len(sys.argv) > 1 else "."
+    parser = argparse.ArgumentParser(description='商用利用制限チェッカー')
+    parser.add_argument('--staged-files', nargs='+', help='チェックするステージングされたファイル')
+    parser.add_argument('--workspace', default='.', help='ワークスペースパス')
+    parser.add_argument('--staged-only', action='store_true', help='ステージングされたファイルのみチェック')
     
-    checker = LicenseChecker(workspace_path)
-    results = checker.scan_workspace()
-    checker.print_report(results)
+    args = parser.parse_args()
+    
+    checker = LicenseChecker(args.workspace)
+    
+    if args.staged_only or args.staged_files:
+        # ステージングされたファイルのみチェック
+        results = checker.scan_staged_files()
+        checker.print_report(results, staged_only=True)
+    else:
+        # ワークスペース全体をチェック
+        results = checker.scan_workspace()
+        checker.print_report(results)
 
 if __name__ == "__main__":
     main()
